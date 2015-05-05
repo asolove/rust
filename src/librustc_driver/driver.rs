@@ -335,6 +335,7 @@ impl<'a, 'ast, 'tcx> CompileState<'a, 'ast, 'tcx> {
 
 pub fn phase_1_parse_input(sess: &Session, cfg: ast::CrateConfig, input: &Input)
     -> ast::Crate {
+    sess.show_progress("Parsing");
     // These may be left in an incoherent state after a previous compile.
     // `clear_tables` and `get_ident_interner().clear()` can be used to free
     // memory, but they do not restore the initial state.
@@ -381,6 +382,7 @@ pub fn phase_2_configure_and_expand(sess: &Session,
                                     crate_name: &str,
                                     addl_plugins: Option<Vec<String>>)
                                     -> Option<ast::Crate> {
+    sess.show_progress("Configuring and expanding");
     let time_passes = sess.time_passes();
 
     *sess.crate_types.borrow_mut() =
@@ -581,6 +583,7 @@ pub fn phase_3_run_analysis_passes<'tcx>(sess: Session,
                                          name: String,
                                          make_glob_map: resolve::MakeGlobMap)
                                          -> ty::CrateAnalysis<'tcx> {
+    sess.show_progress("Analyzing");
     let time_passes = sess.time_passes();
     let krate = ast_map.krate();
 
@@ -716,6 +719,7 @@ pub fn phase_3_run_analysis_passes<'tcx>(sess: Session,
 /// be discarded.
 pub fn phase_4_translate_to_llvm<'tcx>(analysis: ty::CrateAnalysis<'tcx>)
                                        -> (ty::ctxt<'tcx>, trans::CrateTranslation) {
+    analysis.ty_cx.sess.show_progress("Translating to LLVM");
     let time_passes = analysis.ty_cx.sess.time_passes();
 
     time(time_passes, "resolving dependency formats", (), |_|
@@ -731,6 +735,7 @@ pub fn phase_4_translate_to_llvm<'tcx>(analysis: ty::CrateAnalysis<'tcx>)
 pub fn phase_5_run_llvm_passes(sess: &Session,
                                trans: &trans::CrateTranslation,
                                outputs: &OutputFilenames) {
+    sess.show_progress("Optimizing LLVM");
     if sess.opts.cg.no_integrated_as {
         let output_type = config::OutputTypeAssembly;
 
@@ -759,6 +764,7 @@ pub fn phase_5_run_llvm_passes(sess: &Session,
 pub fn phase_6_link_output(sess: &Session,
                            trans: &trans::CrateTranslation,
                            outputs: &OutputFilenames) {
+    sess.show_progress("Linking");
     let old_path = env::var_os("PATH").unwrap_or(OsString::new());
     let mut new_path = sess.host_filesearch(PathKind::All).get_tools_search_paths();
     new_path.extend(env::split_paths(&old_path));
